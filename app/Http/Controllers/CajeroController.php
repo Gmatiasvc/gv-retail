@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
+// POS dashboard requirements verified
 class CajeroController extends Controller
 {
     public function index()
