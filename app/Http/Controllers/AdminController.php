@@ -101,21 +101,56 @@ class AdminController extends Controller
         return redirect()->route('admin.dashboard')->with('success', 'Cliente registrado correctamente.');
     }
 
+    public function editCliente(Cliente $cliente)
+    {
+        return view('admin.clientes.edit', compact('cliente'));
+    }
+
+    public function updateCliente(Request $request, Cliente $cliente)
+    {
+        $data = $request->validate([
+            'tipo_documento' => 'required|string',
+            'num_documento' => 'required|string|unique:clientes,num_documento,' . $cliente->id,
+            'razon_social' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'telefono' => 'nullable|string|max:50',
+        ]);
+
+        $cliente->update($data);
+
+        return redirect()->route('admin.dashboard')->with('success', 'Cliente actualizado correctamente.');
+    }
+
     public function storeCajero(Request $request)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
         ]);
 
         User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => bcrypt($data['password']),
         ]);
 
         return redirect()->route('admin.dashboard')->with('success', 'Cajero registrado correctamente.');
+    }
+
+    public function editCajero(User $cajero)
+    {
+        return view('admin.cajeros.edit', compact('cajero'));
+    }
+
+    public function updateCajero(Request $request, User $cajero)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $cajero->id,
+        ]);
+
+        $cajero->update($data);
+
+        return redirect()->route('admin.dashboard')->with('success', 'Cajero actualizado correctamente.');
     }
 
     public function reportesVentas(Request $request)

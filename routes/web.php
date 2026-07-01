@@ -30,7 +30,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::resource('productos', AdminController::class)->except(['show']);
     Route::post('/clientes', [AdminController::class, 'storeCliente'])->name('clientes.store');
+    Route::get('/clientes/{cliente}/edit', [AdminController::class, 'editCliente'])->name('clientes.edit');
+    Route::put('/clientes/{cliente}', [AdminController::class, 'updateCliente'])->name('clientes.update');
     Route::post('/cajeros', [AdminController::class, 'storeCajero'])->name('cajeros.store');
+    Route::get('/cajeros/{cajero}/edit', [AdminController::class, 'editCajero'])->name('cajeros.edit');
+    Route::put('/cajeros/{cajero}', [AdminController::class, 'updateCajero'])->name('cajeros.update');
     Route::get('/reportes/ventas', [AdminController::class, 'reportesVentas'])->name('reportes.ventas');
     Route::get('/reportes/clientes', [AdminController::class, 'reportesClientes'])->name('reportes.clientes');
 });
