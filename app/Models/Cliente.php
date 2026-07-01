@@ -12,6 +12,7 @@ class Cliente extends Model
         'razon_social',
         'email',
         'telefono',
+        'puntos',
     ];
 
     public function ventas()

@@ -6,6 +6,7 @@ use App\Models\Producto;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\Cliente;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,8 @@ class CajeroController extends Controller
 {
     public function index()
     {
-        return view('cajero.dashboard');
+        $cajeros = User::orderBy('name')->get();
+        return view('cajero.dashboard', compact('cajeros'));
     }
 
     public function searchClient(Request $request)
@@ -93,9 +95,10 @@ class CajeroController extends Controller
         $producto = Producto::where('barcode', $barcode)->first();
 
         if ($producto) {
+            $producto->append('imagen_url');
             return response()->json([
                 'success' => true,
-                'producto' => $producto
+                'producto' => $producto->toArray()
             ]);
         }
 
@@ -105,6 +108,89 @@ class CajeroController extends Controller
         ], 404);
     }
 
+    public function listCajeros()
+    {
+        $cajeros = User::orderBy('name')->get(['id', 'name', 'email']);
+        return response()->json(['success' => true, 'cajeros' => $cajeros]);
+    }
+
+    public function createCajero(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $data['password'] = $data['password'] ? bcrypt($data['password']) : bcrypt('password');
+
+        $cajero = User::create($data);
+
+        return response()->json([
+            'success' => true,
+            'cajero' => $cajero
+        ], 201);
+    }
+
+    public function createClient(Request $request)
+    {
+        $data = $request->validate([
+            'tipo_documento' => 'required|string',
+            'num_documento' => 'nullable|string',
+            'razon_social' => 'required|string',
+            'email' => 'nullable|email',
+            'telefono' => 'nullable|string',
+        ]);
+
+        // Normalize SIN_DNI and missing document to default public
+        if (isset($data['tipo_documento']) && $data['tipo_documento'] === 'SIN_DNI') {
+            $data['tipo_documento'] = 'DNI';
+            $data['num_documento'] = $data['num_documento'] ?: '00000000';
+        }
+
+        if (empty($data['num_documento'])) {
+            return response()->json(['success' => false, 'message' => 'El número de documento es requerido'], 400);
+        }
+
+        // Ensure uniqueness of document
+        if (Cliente::where('num_documento', $data['num_documento'])->exists()) {
+            return response()->json(['success' => false, 'message' => 'Ya existe un cliente con ese número de documento'], 409);
+        }
+
+        $cliente = Cliente::create(array_merge($data, ['puntos' => 0]));
+
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente
+        ], 201);
+    }
+
+    public function updateClient(Request $request, $id)
+    {
+        $cliente = Cliente::findOrFail($id);
+
+        $data = $request->validate([
+            'tipo_documento' => 'required|string',
+            'num_documento' => "required|string|unique:clientes,num_documento,{$id}",
+            'razon_social' => 'required|string',
+            'email' => 'nullable|email',
+            'telefono' => 'nullable|string',
+            'puntos' => 'nullable|integer|min:0',
+        ]);
+
+        if ($data['tipo_documento'] === 'SIN_DNI') {
+            $data['tipo_documento'] = 'DNI';
+            $data['num_documento'] = $data['num_documento'] ?: '00000000';
+        }
+
+        $cliente->update($data);
+
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente
+        ]);
+    }
+
     public function processSale(Request $request)
     {
         $request->validate([
@@ -112,6 +198,9 @@ class CajeroController extends Controller
             'productos.*.id' => 'required|exists:productos,id',
             'productos.*.cantidad' => 'required|integer|min:1',
             'cliente_id' => 'nullable|exists:clientes,id',
+            'cajero_id' => 'required|exists:users,id',
+            'pago_recibido' => 'nullable|numeric|min:0',
+            'puntos_usados' => 'nullable|integer|min:0',
         ]);
 
         try {
@@ -169,13 +258,64 @@ class CajeroController extends Controller
                 $producto->save();
             }
 
+            $puntosUsados = (int) $request->input('puntos_usados', 0);
+            $descuento = 0;
+            $totalSinDescuento = $total;
+
+            if ($puntosUsados > 0) {
+                if (! $request->filled('cliente_id')) {
+                    throw new \Exception('Debe seleccionar un cliente para usar puntos.');
+                }
+
+                if ($cliente->num_documento === '00000000') {
+                    throw new \Exception('El cliente público no puede usar puntos.');
+                }
+
+                if ($puntosUsados > $cliente->puntos) {
+                    throw new \Exception('El cliente no tiene suficientes puntos.');
+                }
+
+                $maxPuntosPorTotal = (int) floor($total * 10);
+                if ($maxPuntosPorTotal <= 0) {
+                    throw new \Exception('No puede usar puntos en una venta tan baja.');
+                }
+
+                if ($puntosUsados > $maxPuntosPorTotal) {
+                    throw new \Exception("La cantidad de puntos a usar no puede exceder {$maxPuntosPorTotal} para cubrir el total de la venta.");
+                }
+
+                // 1 punto = S/ 0.10
+                $descuento = round($puntosUsados * 0.10, 2);
+                $total = max($total - $descuento, 0);
+            }
+
+            $pagoRecibido = $request->input('pago_recibido');
+            if ($total > 0 && ($pagoRecibido === null || floatval($pagoRecibido) < floatval($total))) {
+                throw new \Exception('El monto recibido debe ser al menos el total a pagar.');
+            }
+
+            $cambio = null;
+            if ($pagoRecibido !== null) {
+                $cambio = floatval($pagoRecibido) - floatval($total);
+            }
+
+            // Reducir puntos usados antes de guardar la venta
+            if ($puntosUsados > 0 && $cliente && $cliente->num_documento !== '00000000') {
+                $cliente->puntos = max(($cliente->puntos ?? 0) - $puntosUsados, 0);
+            }
+
             // Crear Venta
             $venta = Venta::create([
                 'tipo_comprobante' => $tipo_comprobante,
                 'serie_comprobante' => $serie_comprobante,
                 'numero_comprobante' => $siguienteNumero,
                 'cliente_id' => $cliente->id,
+                'cajero_id' => $request->input('cajero_id'),
                 'total' => $total,
+                'descuento' => $descuento,
+                'puntos_usados' => $puntosUsados,
+                'pago_recibido' => $pagoRecibido,
+                'cambio' => $cambio,
             ]);
 
             // Crear VentaDetalle
@@ -184,11 +324,19 @@ class CajeroController extends Controller
                 VentaDetalle::create($detalle);
             }
 
+            // Manejar puntos: otorgar 1 punto por cada sol entero gastado sobre el total neto
+            if ($cliente && $cliente->num_documento !== '00000000') {
+                $puntosGanados = (int) floor($total);
+                $cliente->puntos = ($cliente->puntos ?? 0) + $puntosGanados;
+                $cliente->save();
+            }
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'venta_id' => $venta->id,
+                'cambio' => $cambio,
                 'message' => 'Venta registrada exitosamente',
             ]);
 
@@ -203,10 +351,17 @@ class CajeroController extends Controller
 
     public function downloadReceipt($id)
     {
-        $venta = Venta::with(['cliente', 'detalles.producto'])->findOrFail($id);
+        $venta = Venta::with(['cliente', 'detalles.producto', 'cajero'])->findOrFail($id);
 
         $pdf = Pdf::loadView('cajero.receipt', compact('venta'));
 
         return $pdf->download("comprobante_{$venta->serie_comprobante}-{$venta->numero_comprobante}.pdf");
+    }
+
+    // Render HTML receipt for on-screen preview (not PDF)
+    public function viewReceiptHtml($id)
+    {
+        $venta = Venta::with(['cliente', 'detalles.producto', 'cajero'])->findOrFail($id);
+        return view('cajero.receipt', compact('venta'));
     }
 }

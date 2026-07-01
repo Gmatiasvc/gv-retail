@@ -25,6 +25,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagen</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código de Barras</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
@@ -36,10 +37,17 @@
                             @foreach ($productos as $producto)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $producto->id }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $producto->barcode }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $producto->nombre }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">${{ number_format($producto->precio, 2) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $producto->stock }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($producto->imagen_url)
+                                        <img src="{{ $producto->imagen_url }}" alt="{{ $producto->nombre }}" class="h-16 w-16 object-cover rounded" />
+                                    @else
+                                        <span class="text-gray-400">Sin imagen</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ $producto->barcode }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ $producto->nombre }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">S/ {{ number_format($producto->precio, 2) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ $producto->stock }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <a href="{{ route('admin.productos.edit', $producto->id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
                                         <form action="{{ route('admin.productos.destroy', $producto->id) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Estás seguro de eliminar este producto?');">

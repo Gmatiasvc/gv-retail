@@ -9,9 +9,21 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <form method="POST" action="{{ route('admin.productos.update', $producto->id) }}">
+                    <form method="POST" action="{{ route('admin.productos.update', $producto->id) }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
+
+                        <!-- Imagen -->
+                        <div>
+                            <x-input-label for="imagen" :value="__('Imagen del producto')" />
+                            @if($producto->imagen_url)
+                                <div class="mt-2 mb-2">
+                                    <img src="{{ $producto->imagen_url }}" alt="{{ $producto->nombre }}" class="h-24 w-24 object-cover rounded">
+                                </div>
+                            @endif
+                            <input id="imagen" class="block mt-1 w-full" type="file" name="imagen" accept="image/*">
+                            <x-input-error :messages="$errors->get('imagen')" class="mt-2" />
+                        </div>
 
                         <!-- Barcode -->
                         <div>
