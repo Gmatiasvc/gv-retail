@@ -22,7 +22,16 @@
                         <!-- Barcode -->
                         <div>
                             <x-input-label for="barcode" :value="__('Código de Barras')" />
-                            <x-text-input id="barcode" class="block mt-1 w-full" type="text" name="barcode" :value="old('barcode')" required autofocus />
+                            <div class="flex items-center gap-2 mt-1">
+                                <x-text-input id="barcode" class="block w-full" type="text" name="barcode" :value="old('barcode')" required autofocus />
+                                <button type="button" id="start-scanner-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-barcode"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M17 7v10"/></svg>
+                                </button>
+                            </div>
+                            <div id="reader-container" class="hidden mt-2 border rounded p-2">
+                                <div id="reader"></div>
+                                <button type="button" id="stop-scanner-btn" class="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 w-full">Cerrar Escáner</button>
+                            </div>
                             <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
                         </div>
 
@@ -61,10 +70,63 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const barcodeInput = document.getElementById('barcode');
             const nombreInput = document.getElementById('nombre');
+            const startScannerBtn = document.getElementById('start-scanner-btn');
+            const stopScannerBtn = document.getElementById('stop-scanner-btn');
+            const readerContainer = document.getElementById('reader-container');
+
+            let html5QrcodeScanner = null;
+
+            startScannerBtn.addEventListener('click', function() {
+                readerContainer.classList.remove('hidden');
+
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader",
+                        { fps: 10, qrbox: {width: 250, height: 250} },
+                        /* verbose= */ false);
+
+                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                }
+            });
+
+            stopScannerBtn.addEventListener('click', function() {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().then(() => {
+                        html5QrcodeScanner = null;
+                        readerContainer.classList.add('hidden');
+                    }).catch(error => {
+                        console.error("Failed to clear html5QrcodeScanner. ", error);
+                    });
+                } else {
+                    readerContainer.classList.add('hidden');
+                }
+            });
+
+            function onScanSuccess(decodedText, decodedResult) {
+                // handle the scanned code as you like, for example:
+                barcodeInput.value = decodedText;
+                fetchProductName(decodedText);
+
+                // Stop scanning after successful scan
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().then(() => {
+                        html5QrcodeScanner = null;
+                        readerContainer.classList.add('hidden');
+                    }).catch(error => {
+                        console.error("Failed to clear html5QrcodeScanner. ", error);
+                    });
+                }
+            }
+
+            function onScanFailure(error) {
+                // handle scan failure, usually better to ignore and keep scanning.
+                // console.warn(`Code scan error = ${error}`);
+            }
 
             // Handle Enter key in barcode input (common for barcode scanners)
             barcodeInput.addEventListener('keydown', function(e) {

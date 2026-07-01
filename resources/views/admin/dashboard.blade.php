@@ -64,6 +64,7 @@
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre / Razón</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntos</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -74,6 +75,9 @@
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cliente->razon_social }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cliente->email ?? '-' }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cliente->puntos }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-900">
+                                            <a href="{{ route('admin.clientes.edit', $cliente->id) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -117,6 +121,7 @@
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -125,6 +130,9 @@
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cajero->id }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cajero->name }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ $cajero->email }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-900">
+                                            <a href="{{ route('admin.cajeros.edit', $cajero->id) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -137,7 +145,6 @@
                             @csrf
                             <input name="name" type="text" placeholder="Nombre completo" class="w-full rounded border-gray-300 px-3 py-2" required>
                             <input name="email" type="email" placeholder="Email" class="w-full rounded border-gray-300 px-3 py-2" required>
-                            <input name="password" type="password" placeholder="Contraseña" class="w-full rounded border-gray-300 px-3 py-2" required>
                             <button type="submit" class="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Registrar cajero</button>
                         </form>
                     </div>
