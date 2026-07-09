@@ -421,6 +421,39 @@
                 }
             });
 
+            // --- WebSocket Escáner Local ---
+            function connectWebSocket() {
+                const ws = new WebSocket('ws://localhost:57891');
+
+                ws.onmessage = function(event) {
+                    try {
+                        const payload = JSON.parse(event.data);
+                        if (payload.action === "putScanSessions") {
+                            const barcode = payload.data.scanSessions[0].scannings[0].text;
+                            if (barcode) {
+                                manualBarcodeInput.value = barcode;
+                                btnSearch.click();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error procesando mensaje WebSocket:', error);
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.warn('Conexión WebSocket cerrada. Intentando reconectar en 3 segundos...');
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('Error en WebSocket escáner local:', error);
+                    ws.close();
+                };
+            }
+
+            // Iniciar conexión WebSocket
+            connectWebSocket();
+
             // --- Lógica del POS ---
             async function searchProduct(barcode) {
                 titleEl.textContent = `Punto de Venta - Buscando ${barcode}...`;
