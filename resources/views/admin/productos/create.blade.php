@@ -87,7 +87,13 @@
                 if (!html5QrcodeScanner) {
                     html5QrcodeScanner = new Html5QrcodeScanner(
                         "reader",
-                        { fps: 10, qrbox: {width: 250, height: 250} },
+                        {
+                            fps: 30,
+                            qrbox: {width: 250, height: 250},
+                            useBarCodeDetectorIfSupported: true,
+                            showTorchButtonIfSupported: true,
+                            rememberLastUsedCamera: true
+                        },
                         /* verbose= */ false);
 
                     html5QrcodeScanner.render(onScanSuccess, onScanFailure);

@@ -401,7 +401,13 @@
 
             let html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader",
-                { fps: 10, qrbox: {width: 250, height: 150} },
+                {
+                    fps: 30,
+                    qrbox: {width: 250, height: 150},
+                    useBarCodeDetectorIfSupported: true,
+                    showTorchButtonIfSupported: true,
+                    rememberLastUsedCamera: true
+                },
                 /* verbose= */ false);
             html5QrcodeScanner.render(onScanSuccess);
 
